@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Streamlitアプリ版：JSON → Graphviz(PNG) 可視化（日本語フォント NotoSansJP-VariableFont_wght.ttf 対応）
+Streamlitアプリ版：JSON → Graphviz(PNG) 可視化（Cloud用：fonts-noto-cjk対応）
 """
 
 import streamlit as st
@@ -14,17 +14,12 @@ from PIL import Image
 import os
 
 # ────────── フォント設定 ──────────
-# リポジトリ直下に NotoSansJP-VariableFont_wght.ttf を配置してください
-FONT_DIR   = os.path.dirname(__file__)
-FONT_FILE  = "NotoSansJP-VariableFont_wght.ttf"
-FONT_PATH  = os.path.join(FONT_DIR, FONT_FILE)
+# Cloudにfonts-noto-cjkが入っていればOK
+# Graphvizにフォントパスを明示的に教える
+os.environ["GDFONTPATH"]  = "/usr/share/fonts/truetype/noto"
+os.environ["DOT_FONTPATH"] = "/usr/share/fonts/truetype/noto"
 
-# Graphviz にフォントディレクトリを認識させる
-os.environ["GDFONTPATH"]  = FONT_DIR
-os.environ["DOT_FONTPATH"] = FONT_DIR
-
-# Variable フォントでも family 名で指定する
-FONT = "Noto Sans JP"
+FONT = "Noto Sans CJK JP"  # Cloud側で導入される日本語フォント名
 
 # ────────── ノード名生成 ──────────
 def _next(n: int) -> str:
@@ -82,13 +77,12 @@ def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物
     _to_dot("root", json_data, 0, dot)
     dot.write("}\n")
 
-    env = os.environ.copy()
     subprocess.run(["dot", "-Tpng", "-o", png_path],
-                   input=dot.getvalue(), text=True, check=True, env=env)
+                   input=dot.getvalue(), text=True, check=True)
 
 # ────────── Streamlitアプリ部分 ──────────
 st.set_page_config(page_title="JSON→Graphviz 可視化", layout="wide")
-st.title("🧩 JSON → Graphviz PNG 可視化ツール（日本語フォント対応版）")
+st.title("🧩 JSON → Graphviz PNG 可視化ツール（Cloud版／日本語対応）")
 
 uploaded_file = st.file_uploader("JSONファイルをアップロード", type=["json"])
 
@@ -113,4 +107,4 @@ if uploaded_file:
         st.error(f"❌ エラーが発生しました: {e}")
 
 st.markdown("---")
-st.caption("※ Graphviz(dot)がインストールされている必要があります。Cloudでは同梱フォントを自動使用します。")
+st.caption("※ Streamlit Cloud では packages.txt に 'fonts-noto-cjk' を追加することで日本語フォントが利用可能です。")
