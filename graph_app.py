@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Streamlitアプリ版：JSON → Graphviz(PNG) 可視化
+Streamlitアプリ版：JSON → Graphviz(PNG) 可視化（日本語フォント NotoSansJP-VariableFont_wght.ttf 対応）
 """
 
 import streamlit as st
@@ -11,8 +11,16 @@ import tempfile
 from io import StringIO
 from typing import Any, Dict, List, Union
 from PIL import Image
+import os
 
-FONT = "Noto Sans CJK JP"  # 日本語フォント
+# ────────── フォント設定 ──────────
+# フォントファイルをリポジトリ直下に配置してください：
+#   Graph_app/NotoSansJP-VariableFont_wght.ttf
+FONT_PATH = os.path.join(os.path.dirname(__file__), "NotoSansJP-VariableFont_wght.ttf")
+if os.path.exists(FONT_PATH):
+    FONT = FONT_PATH  # Cloud上で同梱フォントを使用
+else:
+    FONT = "Noto Sans CJK JP"  # フォールバック（ローカル環境用）
 
 # ────────── ノード名生成 ──────────
 def _next(n: int) -> str:
@@ -66,7 +74,7 @@ def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物
     dot.write(f'  graph [rankdir=LR, fontname="{FONT}"];\n')
     dot.write(f'  node  [shape=plaintext, fontname="{FONT}"];\n')
     dot.write(f'  edge  [fontname="{FONT}"];\n')
-    dot.write(f'  root [label="{root_label}", shape=circle];\n')
+    dot.write(f'  root [label="{root_label}", shape=circle, fontname="{FONT}"];\n')
     _to_dot("root", json_data, 0, dot)
     dot.write("}\n")
 
@@ -75,7 +83,7 @@ def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物
 
 # ────────── Streamlitアプリ部分 ──────────
 st.set_page_config(page_title="JSON→Graphviz 可視化", layout="wide")
-st.title("🧩 JSON → Graphviz PNG 可視化ツール（物性版）")
+st.title("🧩 JSON → Graphviz PNG 可視化ツール（日本語フォント対応版）")
 
 uploaded_file = st.file_uploader("JSONファイルをアップロード", type=["json"])
 
@@ -100,4 +108,4 @@ if uploaded_file:
         st.error(f"❌ エラーが発生しました: {e}")
 
 st.markdown("---")
-st.caption("※ Graphviz(dot)がインストールされている必要があります。`sudo apt install graphviz` 等で導入可能。")
+st.caption("※ Graphviz(dot)と日本語フォント（NotoSansJP-VariableFont_wght.ttf）が必要です。Cloudでは同梱フォントを自動使用します。")
