@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; overflow: hidden; background: #fafafa; font-family: "Noto Sans JP", sans-serif; }
+  .node circle { fill: #ffd966; stroke: #999; stroke-width: 1.5px; }
+  .link { fill: none; stroke: #ccc; stroke-opacity: 0.6; stroke-width: 1.2px; }
+  .label { font-size: 10px; pointer-events: none; }
+</style>
+<body>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const width = window.innerWidth, height = window.innerHeight;
+const svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
+
+const jsonData = JSON.parse(`__JSON_DATA__`);
+
+const root = d3.hierarchy(jsonData);
+const treeLayout = d3.tree().size([height - 50, width - 200]);
+treeLayout(root);
+
+const link = svg.selectAll(".link")
+  .data(root.links())
+  .enter().append("path")
+  .attr("class", "link")
+  .attr("d", d3.linkHorizontal()
+    .x(d => d.y)
+    .y(d => d.x));
+
+const node = svg.selectAll(".node")
+  .data(root.descendants())
+  .enter().append("g")
+  .attr("class", "node")
+  .attr("transform", d => `translate(${d.y},${d.x})`);
+
+node.append("circle").attr("r", 5);
+node.append("text")
+  .attr("dx", 10)
+  .attr("dy", 3)
+  .attr("class", "label")
+  .text(d => d.data.name || d.data.key || d.data || "");
+</script>
+</body>
