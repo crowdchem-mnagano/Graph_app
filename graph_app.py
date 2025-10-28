@@ -4,23 +4,22 @@ JSON → Graphviz（PNG + SVG）可視化ツール(Visualizer)
 
 概要 / Overview:
 このアプリはJSON構造をグラフ形式に変換し、PNGおよびSVG形式で可視化します。
-可視化されたグラフを見ておかしなところがないか目視でチャックします。
+可視化されたグラフを見ておかしなところがないか目視でチェックします。
 
 This app converts a JSON structure into a graph format and visualizes it in both PNG and SVG.
 You can visually inspect the generated graph to check for any irregularities or errors.
 
 使い方 / How to use:
-1️. JSONファイルをアップロードします。
-    → Upload a `.json` file using the uploader.
-2️. ルートノードのラベル（例："物性"）を入力します。
-    → Enter the root node label (e.g., “Property”).
-3️. 「PNG可視化結果」としてツリー構造が描画されます。
-    → The PNG graph is displayed inline.
-4️. 「SVGを開く」リンクで拡大表示またはダウンロード可能。
-    → Click the SVG link to view or download an interactive version.
-5️. PNGはダウンロードボタンから保存可能です。
-    → You can download the PNG directly.
-
+1. JSONファイルをアップロードします。
+   → Upload a `.json` file using the uploader.
+2. ルートノードのラベル（例："物性"）を入力します。
+   → Enter the root node label (e.g., “Property”).
+3. 「PNG可視化結果」としてツリー構造が描画されます。
+   → The PNG graph is displayed inline.
+4. 「SVGを開く」リンクで拡大表示またはダウンロード可能。
+   → Click the SVG link to view or download an interactive version.
+5. PNGはダウンロードボタンから保存可能です。
+   → You can download the PNG directly.
 """
 
 import streamlit as st
@@ -35,8 +34,6 @@ import os
 import base64
 
 # ───────────── フォント設定 / Font Settings ─────────────
-# Cloud環境ではNotoフォントを使用（日本語対応）
-# Use Noto Sans CJK JP for Japanese text rendering in cloud environments
 os.environ["GDFONTPATH"]  = "/usr/share/fonts/truetype/noto"
 os.environ["DOT_FONTPATH"] = "/usr/share/fonts/truetype/noto"
 FONT = "Noto Sans CJK JP"
@@ -48,10 +45,7 @@ def _next(n: int) -> str:
 
 # ───────────── JSON構造 → DOT変換 / JSON → DOT ─────────────
 def _to_dot(parent: str, data: Any, idx: int, buf: StringIO) -> int:
-    """
-    JSONの階層構造を再帰的にGraphviz DOT言語へ変換
-    Recursively convert JSON structure into Graphviz DOT syntax
-    """
+    """JSONの階層構造を再帰的にGraphviz DOT言語へ変換 / Recursively convert JSON to DOT"""
     name = _next(idx)
 
     # --- listの場合 / Case: list ---
@@ -93,10 +87,7 @@ def _to_dot(parent: str, data: Any, idx: int, buf: StringIO) -> int:
 
 # ───────────── JSON → Graphviz出力 / Generate Graphviz Images ─────────────
 def json2graph(json_data: Union[Dict, List], png_path: str, svg_path: str, root_label: str = "物性") -> None:
-    """
-    JSONデータからGraphviz図（PNG + SVG）を生成
-    Generate Graphviz diagrams (PNG + SVG) from JSON data
-    """
+    """JSONデータからGraphviz図（PNG + SVG）を生成 / Generate Graphviz diagrams (PNG + SVG)"""
     dot = StringIO()
     dot.write("digraph G {\n")
     dot.write(f'  graph [rankdir=LR, fontname="{FONT}", charset="UTF-8"];\n')
@@ -107,13 +98,36 @@ def json2graph(json_data: Union[Dict, List], png_path: str, svg_path: str, root_
     dot.write("}\n")
 
     dot_input = dot.getvalue()
-    # GraphvizでPNGとSVGを生成 / Generate PNG and SVG via Graphviz
     subprocess.run(["dot", "-Tpng", "-o", png_path], input=dot_input, text=True, check=True)
     subprocess.run(["dot", "-Tsvg", "-o", svg_path], input=dot_input, text=True, check=True)
 
 # ───────────── Streamlitアプリ本体 / Streamlit App UI ─────────────
 st.set_page_config(page_title="JSON→Graphviz Visualizer", layout="wide")
 st.title("JSON → Graphviz PNG + SVG 可視化ツール / Visualizer (Cloud Version, JP Supported)")
+
+# --- アプリの説明を表示 ---
+st.markdown("""
+### 概要 / Overview
+このアプリは JSON 構造をグラフ形式に変換し、PNG および SVG 形式で可視化します。  
+可視化されたグラフを見ておかしなところがないか目視でチェックします。  
+
+**This app converts a JSON structure into a graph format and visualizes it in both PNG and SVG.**  
+You can visually inspect the generated graph to check for any irregularities or errors.  
+
+---
+
+### 使い方 / How to use
+1. JSONファイルをアップロードします。  
+　→ Upload a `.json` file using the uploader.  
+2. ルートノードのラベル（例："物性"）を入力します。  
+　→ Enter the root node label (e.g., “Property”).  
+3. 「PNG可視化結果」としてツリー構造が描画されます。  
+　→ The PNG graph is displayed inline.  
+4. 「SVGを開く」リンクで拡大表示またはダウンロード可能。  
+　→ Click the SVG link to view or download an interactive version.  
+5. PNGはダウンロードボタンから保存可能です。  
+　→ You can download the PNG directly.  
+""")
 
 uploaded_file = st.file_uploader("JSONファイルをアップロード / Upload a JSON file", type=["json"])
 root_label = st.text_input("物性名を記入(任意) / Enter property name (optional)", value="物性")
@@ -123,27 +137,23 @@ if uploaded_file:
         json_data = json.load(uploaded_file)
         st.success("JSONの読み込みに成功しました。図を表示しています... / JSON successfully loaded. Displaying the graph...")
 
-        # 一時ファイル生成 / Create temporary files for Graphviz output
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_png, \
              tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp_svg:
 
             json2graph(json_data, tmp_png.name, tmp_svg.name, root_label)
 
-            # PNG表示 / Display PNG preview
             img = Image.open(tmp_png.name)
             st.image(img, caption="Graphviz PNG 可視化結果 / Visualization Result", use_container_width=True)
 
-            # SVGリンク生成 / Generate clickable SVG link
             with open(tmp_svg.name, "r", encoding="utf-8") as f:
                 svg_data = f.read()
             b64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
             href = f"data:image/svg+xml;base64,{b64}"
             st.markdown(
-                f'<a href="{href}" target="_blank" download="json_graph.svg"> SVGを新しいタブで開く／ダウンロード<br>Open or download SVG in a new tab</a>',
+                f'<a href="{href}" target="_blank" download="json_graph.svg">SVGを新しいタブで開く／ダウンロード<br>Open or download SVG in a new tab</a>',
                 unsafe_allow_html=True
             )
 
-            # PNGダウンロードボタン / PNG download button
             with open(tmp_png.name, "rb") as f:
                 st.download_button("PNGをダウンロード / Download PNG", f, file_name="json_graph.png")
 
