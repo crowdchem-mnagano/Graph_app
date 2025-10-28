@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Streamlitアプリ版：JSON → Graphviz(PNG) 可視化（Cloud用：fonts-noto-cjk対応）
+Streamlitアプリ版：JSON → Graphviz(PNG+SVG) 可視化（Cloud用：fonts-noto-cjk対応）
 """
 
 import streamlit as st
@@ -12,10 +12,9 @@ from io import StringIO
 from typing import Any, Dict, List, Union
 from PIL import Image
 import os
+import base64
 
 # ────────── フォント設定 ──────────
-# Cloudにfonts-noto-cjkが入っていればOK
-# Graphvizにフォントパスを明示的に教える
 os.environ["GDFONTPATH"]  = "/usr/share/fonts/truetype/noto"
 os.environ["DOT_FONTPATH"] = "/usr/share/fonts/truetype/noto"
 
@@ -28,7 +27,6 @@ def _next(n: int) -> str:
 # ────────── JSON構造 → DOT ──────────
 def _to_dot(parent: str, data: Any, idx: int, buf: StringIO) -> int:
     name = _next(idx)
-
     # list
     if isinstance(data, list):
         buf.write(f'{name} [label=<\n<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">\n')
@@ -66,8 +64,8 @@ def _to_dot(parent: str, data: Any, idx: int, buf: StringIO) -> int:
     buf.write(f'{parent}->{name};\n')
     return idx
 
-# ────────── JSON → PNG ──────────
-def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物性") -> None:
+# ────────── JSON → Graphvizファイル（PNG+SVG両方） ──────────
+def json2graph(json_data: Union[Dict, List], png_path: str, svg_path: str, root_label: str = "物性") -> None:
     dot = StringIO()
     dot.write("digraph G {\n")
     dot.write(f'  graph [rankdir=LR, fontname="{FONT}", charset="UTF-8"];\n')
@@ -77,12 +75,13 @@ def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物
     _to_dot("root", json_data, 0, dot)
     dot.write("}\n")
 
-    subprocess.run(["dot", "-Tpng", "-o", png_path],
-                   input=dot.getvalue(), text=True, check=True)
+    dot_input = dot.getvalue()
+    subprocess.run(["dot", "-Tpng", "-o", png_path], input=dot_input, text=True, check=True)
+    subprocess.run(["dot", "-Tsvg", "-o", svg_path], input=dot_input, text=True, check=True)
 
 # ────────── Streamlitアプリ部分 ──────────
 st.set_page_config(page_title="JSON→Graphviz 可視化", layout="wide")
-st.title("🧩 JSON → Graphviz PNG 可視化ツール（Cloud版／日本語対応）")
+st.title("🧩 JSON → Graphviz PNG + SVG 可視化ツール（Cloud版／日本語対応）")
 
 uploaded_file = st.file_uploader("JSONファイルをアップロード", type=["json"])
 
@@ -94,10 +93,25 @@ if uploaded_file:
         st.success("✅ JSONの読み込みに成功しました。")
 
         # 一時ファイルでGraphviz生成
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_png:
-            json2png(json_data, tmp_png.name, root_label)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_png, \
+             tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp_svg:
+
+            json2graph(json_data, tmp_png.name, tmp_svg.name, root_label)
+
+            # PNG表示
             img = Image.open(tmp_png.name)
-            st.image(img, caption="Graphviz可視化結果", use_container_width=True)
+            st.image(img, caption="Graphviz PNG可視化結果", use_container_width=True)
+
+            # SVGクリック表示
+            with open(tmp_svg.name, "r", encoding="utf-8") as f:
+                svg_data = f.read()
+            b64 = base64.b64encode(svg_data.encode("utf-8")).decode("utf-8")
+            href = f"data:image/svg+xml;base64,{b64}"
+
+            st.markdown(
+                f'<a href="{href}" target="_blank" download="json_graph.svg">🧭 SVGを新しいタブで開く／ダウンロード</a>',
+                unsafe_allow_html=True
+            )
 
             # ダウンロードボタン
             with open(tmp_png.name, "rb") as f:
@@ -107,4 +121,4 @@ if uploaded_file:
         st.error(f"❌ エラーが発生しました: {e}")
 
 st.markdown("---")
-st.caption("※ Streamlit Cloud では packages.txt に 'fonts-noto-cjk' を追加することで日本語フォントが利用可能です。")
+st.caption("※ packages.txt に 'graphviz' と 'fonts-noto-cjk' を追加してください。SVGはクリックで新しいタブに開きます。")
