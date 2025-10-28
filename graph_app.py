@@ -14,13 +14,17 @@ from PIL import Image
 import os
 
 # ────────── フォント設定 ──────────
-# フォントファイルをリポジトリ直下に配置してください：
-#   Graph_app/NotoSansJP-VariableFont_wght.ttf
-FONT_PATH = os.path.join(os.path.dirname(__file__), "NotoSansJP-VariableFont_wght.ttf")
-if os.path.exists(FONT_PATH):
-    FONT = FONT_PATH  # Cloud上で同梱フォントを使用
-else:
-    FONT = "Noto Sans CJK JP"  # フォールバック（ローカル環境用）
+# リポジトリ直下に NotoSansJP-VariableFont_wght.ttf を配置してください
+FONT_DIR   = os.path.dirname(__file__)
+FONT_FILE  = "NotoSansJP-VariableFont_wght.ttf"
+FONT_PATH  = os.path.join(FONT_DIR, FONT_FILE)
+
+# Graphviz にフォントディレクトリを認識させる
+os.environ["GDFONTPATH"]  = FONT_DIR
+os.environ["DOT_FONTPATH"] = FONT_DIR
+
+# Variable フォントでも family 名で指定する
+FONT = "Noto Sans JP"
 
 # ────────── ノード名生成 ──────────
 def _next(n: int) -> str:
@@ -71,15 +75,16 @@ def _to_dot(parent: str, data: Any, idx: int, buf: StringIO) -> int:
 def json2png(json_data: Union[Dict, List], png_path: str, root_label: str = "物性") -> None:
     dot = StringIO()
     dot.write("digraph G {\n")
-    dot.write(f'  graph [rankdir=LR, fontname="{FONT}"];\n')
+    dot.write(f'  graph [rankdir=LR, fontname="{FONT}", charset="UTF-8"];\n')
     dot.write(f'  node  [shape=plaintext, fontname="{FONT}"];\n')
     dot.write(f'  edge  [fontname="{FONT}"];\n')
     dot.write(f'  root [label="{root_label}", shape=circle, fontname="{FONT}"];\n')
     _to_dot("root", json_data, 0, dot)
     dot.write("}\n")
 
+    env = os.environ.copy()
     subprocess.run(["dot", "-Tpng", "-o", png_path],
-                   input=dot.getvalue(), text=True, check=True)
+                   input=dot.getvalue(), text=True, check=True, env=env)
 
 # ────────── Streamlitアプリ部分 ──────────
 st.set_page_config(page_title="JSON→Graphviz 可視化", layout="wide")
@@ -108,4 +113,4 @@ if uploaded_file:
         st.error(f"❌ エラーが発生しました: {e}")
 
 st.markdown("---")
-st.caption("※ Graphviz(dot)と日本語フォント（NotoSansJP-VariableFont_wght.ttf）が必要です。Cloudでは同梱フォントを自動使用します。")
+st.caption("※ Graphviz(dot)がインストールされている必要があります。Cloudでは同梱フォントを自動使用します。")
